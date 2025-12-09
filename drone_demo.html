@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Drone PID Controller Demo</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+  canvas { background: white; border: 1px solid #ccc; }
+  .controls { margin-top: 15px; }
+  .slider-block { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<h2>Interactive Drone PID Control Demo (Calculus + Engineering)</h2>
+<canvas id="droneCanvas" width="300" height="400"></canvas>
+
+<div class="controls">
+  <div class="slider-block">
+    <label>Kp: <span id="kpVal">8</span></label><br>
+    <input type="range" id="kp" min="0" max="20" step="0.1" value="8">
+  </div>
+
+  <div class="slider-block">
+    <label>Ki: <span id="kiVal">1</span></label><br>
+    <input type="range" id="ki" min="0" max="10" step="0.1" value="1">
+  </div>
+
+  <div class="slider-block">
+    <label>Kd: <span id="kdVal">2</span></label><br>
+    <input type="range" id="kd" min="0" max="10" step="0.1" value="2">
+  </div>
+
+  <div class="slider-block">
+    <label>Setpoint (m): <span id="setVal">2</span></label><br>
+    <input type="range" id="set" min="0" max="3.5" step="0.1" value="2">
+  </div>
+</div>
+
+<script>
+// Canvas and context
+const canvas = document.getElementById('droneCanvas');
+const ctx = canvas.getContext('2d');
+
+// Physics params
+let z = 0, v = 0;
+let g = 9.81, drag = 0.1;
+let m = 1;
+let dt = 0.016;
+let integral = 0;
+let prevError = 0;
+
+// UI elements
+let KpSlider = document.getElementById('kp');
+let KiSlider = document.getElementById('ki');
+let KdSlider = document.getElementById('kd');
+let setSlider = document.getElementById('set');
+
+function updateLabels() {
+  document.getElementById('kpVal').textContent = KpSlider.value;
+  document.getElementById('kiVal').textContent = KiSlider.value;
+  document.getElementById('kdVal').textContent = KdSlider.value;
+  document.getElementById('setVal').textContent = setSlider.value;
+}
+
+// Main simulation loop
+function loop() {
+  updateLabels();
+
+  let Kp = parseFloat(KpSlider.value);
+  let Ki = parseFloat(KiSlider.value);
+  let Kd = parseFloat(KdSlider.value);
+  let setpoint = parseFloat(setSlider.value);
+
+  let error = setpoint - z;
+  integral += error * dt;
+  let derivative = (error - prevError) / dt;
+
+  let u = Kp * error + Ki * integral + Kd * derivative;
+  let a = (-m * g + u - drag * v) / m;
+
+  v += a * dt;
+  z += v * dt;
+
+  if (z < 0) { z = 0; v = 0; }
+  prevError = error;
+
+  drawDrone(z, setpoint);
+  requestAnimationFrame(loop);
+}
+
+function drawDrone(zMeters, setpoint) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Convert meters to pixels
+  let y = canvas.height - (zMeters * 100) - 50;
+  let ySet = canvas.height - (setpoint * 100) - 50;
+
+  // Draw setpoint line
+  ctx.strokeStyle = 'red';
+  ctx.setLineDash([5, 5]);
+  ctx.beginPath();
+  ctx.moveTo(0, ySet);
+  ctx.lineTo(canvas.width, ySet);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw drone (simple rectangle)
+  ctx.fillStyle = 'blue';
+  ctx.fillRect(canvas.width/2 - 25, y, 50, 20);
+}
+
+loop();
+</script>
+</body>
+</html>
+
